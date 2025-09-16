@@ -1,4 +1,30 @@
 @import "tailwindcss";
+/* @plugin "flowbite-react/plugin/tailwindcss";
+@source "../.flowbite-react/class-list.json"; */
+
+@theme{
+  --color-secondary-black: var(--color-gray-700);
+  --color-bg-light-blue: var(--color-blue-50);
+  --color-md-blue: var(--color-blue-400);
+  --color-dark-blue: var(--color-blue-600);
+  --font-kodchasan: "Kodchasan", sans-serif;
+}
+
+@layer utilities{
+  .bg-grid{
+    background-image: linear-gradient(to right, rgba(0,0,0,0.2) 1.5px, transparent 1px),linear-gradient(to bottom, rgba(0,0,0,0.2) 1.5px, transparent 1px);
+    background-size: 60px 60px;
+  }
+}
+
+.card{
+  @apply border border-white backdrop-blur-sm rounded bg-white/30 w-[90dvw] max-w-[1200px] overflow-hidden mb-4;
+}
+
+.inp-style{
+  @apply h-8 bg-transparent border-b border-secondary-black text-xs focus:text-secondary-black focus:outline-none focus:ring-0;
+}
+
 /* #root {
   max-width: 1280px;
   margin: 0 auto;

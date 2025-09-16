@@ -1,0 +1,202 @@
+[
+  {
+    "id": "scenario_01",
+    "type": "commute",
+    "prompt": "It's time for your 8km trip to the city center. How will you travel?",
+    "options": [
+      { "id": "opt_01a", "text": "Take your Gas Car", "co2_impact": 2.2 },
+      { "id": "opt_01b", "text": "Ride the Electric Bus", "co2_impact": 0.5 },
+      { "id": "opt_01c", "text": "Ride your Bicycle", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_02",
+    "type": "food",
+    "prompt": "You're choosing lunch. What's on the menu today?",
+    "options": [
+      { "id": "opt_02a", "text": "Beef Burger", "co2_impact": 3.1 },
+      { "id": "opt_02b", "text": "Chicken Sandwich", "co2_impact": 1.2 },
+      { "id": "opt_02c", "text": "Lentil Soup & Salad", "co2_impact": 0.2 }
+    ]
+  },
+  {
+    "id": "scenario_03",
+    "type": "home_energy",
+    "prompt": "You're leaving the room for an hour. What do you do about the lights?",
+    "options": [
+      { "id": "opt_03a", "text": "Leave the old incandescent bulb on", "co2_impact": 0.08 },
+      { "id": "opt_03b", "text": "Leave the modern LED bulb on", "co2_impact": 0.01 },
+      { "id": "opt_03c", "text": "Turn off the lights", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_04",
+    "type": "shopping",
+    "prompt": "You're buying groceries. How will you pack them?",
+    "options": [
+      { "id": "opt_04a", "text": "Use new plastic bags from the store", "co2_impact": 0.1 },
+      { "id": "opt_04b", "text": "Buy a 'bag for life' and use it", "co2_impact": 0.05 },
+      { "id": "opt_04c", "text": "Bring your own reusable bags", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_05",
+    "type": "waste",
+    "prompt": "You've finished your morning coffee on the go. What about the cup?",
+    "options": [
+      { "id": "opt_05a", "text": "Use a disposable paper cup", "co2_impact": 0.15 },
+      { "id": "opt_05b", "text": "Use a compostable cup", "co2_impact": 0.08 },
+      { "id": "opt_05c", "text": "Use your personal reusable mug", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_06",
+    "type": "commute",
+    "prompt": "Time for a 50km weekend trip. What's your mode of transport?",
+    "options": [
+      { "id": "opt_06a", "text": "Drive your SUV alone", "co2_impact": 15.0 },
+      { "id": "opt_06b", "text": "Take an Electric Train", "co2_impact": 1.5 },
+      { "id": "opt_06c", "text": "Carpool in a gas car with 2 friends", "co2_impact": 4.5 }
+    ]
+  },
+  {
+    "id": "scenario_07",
+    "type": "food",
+    "prompt": "What's the main course for tonight's special dinner?",
+    "options": [
+      { "id": "opt_07a", "text": "Imported Lamb Chops", "co2_impact": 5.5 },
+      { "id": "opt_07b", "text": "Locally Sourced Salmon", "co2_impact": 1.8 },
+      { "id": "opt_07c", "text": "Hearty Mushroom Risotto", "co2_impact": 0.4 }
+    ]
+  },
+  {
+    "id": "scenario_08",
+    "type": "home_energy",
+    "prompt": "It's the end of the day. What about your electronics?",
+    "options": [
+      { "id": "opt_08a", "text": "Leave TV and computer on standby", "co2_impact": 0.3 },
+      { "id": "opt_08b", "text": "Use a smart power strip to turn all off", "co2_impact": 0.02 },
+      { "id": "opt_08c", "text": "Manually unplug all devices", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_09",
+    "type": "shopping",
+    "prompt": "You need a new jacket for the mild winter.",
+    "options": [
+      { "id": "opt_09a", "text": "Buy a new fast-fashion polyester jacket", "co2_impact": 7.0 },
+      { "id": "opt_09b", "text": "Buy a jacket from a local thrift store", "co2_impact": 0.5 },
+      { "id": "opt_09c", "text": "Repair the zipper on your old one", "co2_impact": 0.1 }
+    ]
+  },
+  {
+    "id": "scenario_10",
+    "type": "waste",
+    "prompt": "An online order arrived in a large cardboard box. What do you do with the packaging?",
+    "options": [
+      { "id": "opt_10a", "text": "Throw all packaging in the general trash", "co2_impact": 0.8 },
+      { "id": "opt_10b", "text": "Flatten and recycle the cardboard box", "co2_impact": 0.2 },
+      { "id": "opt_10c", "text": "Reuse the box for storage at home", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_11",
+    "type": "commute",
+    "prompt": "You need to pop out to the local shop, just 1km away.",
+    "options": [
+      { "id": "opt_11a", "text": "Drive the car, it's quickest", "co2_impact": 0.28 },
+      { "id": "opt_11b", "text": "Use a shared E-Scooter", "co2_impact": 0.05 },
+      { "id": "opt_11c", "text": "Walk, you could use the fresh air", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_12",
+    "type": "food",
+    "prompt": "You're grabbing a piece of fruit for a snack.",
+    "options": [
+      { "id": "opt_12a", "text": "An imported mango, flown in from overseas", "co2_impact": 0.7 },
+      { "id": "opt_12b", "text": "A pack of pre-sliced apples in plastic", "co2_impact": 0.2 },
+      { "id": "opt_12c", "text": "A locally grown apple", "co2_impact": 0.05 }
+    ]
+  },
+  {
+    "id": "scenario_13",
+    "type": "home_energy",
+    "prompt": "The house feels a bit chilly tonight.",
+    "options": [
+      { "id": "opt_13a", "text": "Turn the central heating up by 2°C", "co2_impact": 1.5 },
+      { "id": "opt_13b", "text": "Put on a warm sweater and socks", "co2_impact": 0.0 },
+      { "id": "opt_13c", "text": "Use a small, portable electric heater", "co2_impact": 0.9 }
+    ]
+  },
+  {
+    "id": "scenario_14",
+    "type": "shopping",
+    "prompt": "You're thirsty while out in the city. How do you get a drink of water?",
+    "options": [
+      { "id": "opt_14a", "text": "Buy a bottle of water in a plastic bottle", "co2_impact": 0.25 },
+      { "id": "opt_14b", "text": "Buy sparkling water in a glass bottle", "co2_impact": 0.4 },
+      { "id": "opt_14c", "text": "Refill your reusable bottle at a fountain", "co2_impact": 0.0 }
+    ]
+  },
+  {
+    "id": "scenario_15",
+    "type": "waste",
+    "prompt": "You've just finished cooking and have vegetable peels and offcuts.",
+    "options": [
+      { "id": "opt_15a", "text": "Throw them in the general waste bin", "co2_impact": 0.6 },
+      { "id": "opt_15b", "text": "Use a garbage disposal unit in the sink", "co2_impact": 0.4 },
+      { "id": "opt_15c", "text": "Put them in your compost bin", "co2_impact": 0.05 }
+    ]
+  },
+  {
+    "id": "scenario_16",
+    "type": "home_energy",
+    "prompt": "It's laundry day. How will you wash and dry your clothes?",
+    "options": [
+      { "id": "opt_16a", "text": "Hot wash (60°C) and use the tumble dryer", "co2_impact": 3.0 },
+      { "id": "opt_16b", "text": "Cold wash (30°C) and use the tumble dryer", "co2_impact": 1.8 },
+      { "id": "opt_16c", "text": "Cold wash (30°C) and hang to air-dry", "co2_impact": 0.2 }
+    ]
+  },
+  {
+    "id": "scenario_17",
+    "type": "food",
+    "prompt": "You're at the butcher counter. What will you buy for the week?",
+    "options": [
+      { "id": "opt_17a", "text": "Mostly red meat like beef and lamb", "co2_impact": 25.0 },
+      { "id": "opt_17b", "text": "A mix of chicken and pork", "co2_impact": 8.0 },
+      { "id": "opt_17c", "text": "Decide to try plant-based alternatives instead", "co2_impact": 2.0 }
+    ]
+  },
+  {
+    "id": "scenario_18",
+    "type": "commute",
+    "prompt": "You need to travel 300km to another city for a meeting.",
+    "options": [
+      { "id": "opt_18a", "text": "Take a short-haul flight", "co2_impact": 85.0 },
+      { "id": "opt_18b", "text": "Take a high-speed electric train", "co2_impact": 9.0 },
+      { "id": "opt_18c", "text": "Drive a hybrid car", "co2_impact": 35.0 }
+    ]
+  },
+  {
+    "id": "scenario_19",
+    "type": "shopping",
+    "prompt": "Your smartphone is a few years old and the battery is weak.",
+    "options": [
+      { "id": "opt_19a", "text": "Upgrade to the brand new flagship model", "co2_impact": 70.0 },
+      { "id": "opt_19b", "text": "Buy a new battery to make it last longer", "co2_impact": 5.0 },
+      { "id": "opt_19c", "text": "Buy a recent, refurbished model", "co2_impact": 25.0 }
+    ]
+  },
+  {
+    "id": "scenario_20",
+    "type": "waste",
+    "prompt": "You've received a stack of junk mail and flyers.",
+    "options": [
+      { "id": "opt_20a", "text": "Toss it all in the general trash", "co2_impact": 0.5 },
+      { "id": "opt_20b", "text": "Put it all in the paper recycling bin", "co2_impact": 0.1 },
+      { "id": "opt_20c", "text": "Unsubscribe from the senders and recycle the paper", "co2_impact": 0.05 }
+    ]
+  }
+]
