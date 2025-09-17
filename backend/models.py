@@ -1,6 +1,7 @@
-from sqlalchemy import create_engine, Column, Integer,String, Float, ForeignKey
+from sqlalchemy import create_engine, Column, Integer,String, Float, ForeignKey, JSON, DateTime
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
+from datetime import datetime, timezone  
 
 DATABASE_URL = 'sqlite:///./r.db'
 
@@ -49,5 +50,32 @@ class Choice(Base):
     scenario_type = Column(String)
     saved_co2e = Column(Float)
 
+class Lesson(Base):
+    __tablename__ = 'lessons'
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String, unique=True)
+    content = Column(JSON)  # Stores generated lesson JSON
+
+class Quiz(Base):
+    __tablename__ = 'quizzes'
+    id = Column(Integer, primary_key=True)
+    lesson_id = Column(Integer, ForeignKey('lessons.id'))
+    questions = Column(JSON)  # Array of MCQs
+    lesson = relationship("Lesson", backref="quizzes")
+
+class UserResponse(Base):
+    __tablename__ = 'user_responses'
+    id = Column(Integer, primary_key=True, index=True)
+    lesson_id = Column(Integer, ForeignKey('lessons.id'))
+    user_id = Column(Integer)  # Simplified; use your user system
+    answers = Column(JSON)  # e.g., {"q1": 0, "q2": 2, "q3": 1}
+    score = Column(Integer)  # Number of correct answers
+
+class Chat(Base):
+    __tablename__ = "chats"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    title = Column(String)
+    created_at = Column(DateTime, default=datetime.now(timezone.utc))
+    messages = Column(JSON, default=list)  # Stores list of {"role": str, "content": str}
 
 Base.metadata.create_all(bind=engine)

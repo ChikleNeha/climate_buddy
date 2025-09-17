@@ -2,15 +2,16 @@ from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from pydantic import BaseModel
-from models import Scenario, Option, Choice, SessionLocal, UserSettings
-from typing import Optional
+from models import Scenario, Option, Choice, SessionLocal, UserSettings, Lesson, Quiz, UserResponse, Chat
 import pandas as pd 
 import sqlite3
 import random
-# from sqlalchemy.dialects.sqlite import JSON as SQLITE_JSON  
+import ollama
+import re
 import json
+import requests
 
-app = FastAPI()
+app = FastAPI(debug=True)
 
 # Enable CORS for local development
 app.add_middleware(
@@ -26,7 +27,7 @@ class UserCreate(BaseModel):
     # language: str
     # mode: str
 
-class UserResponse(BaseModel):
+class UserOut(BaseModel):
     id: int
     name: str
     # language: str
@@ -39,10 +40,6 @@ class UserUpdate(BaseModel):
     name: str
     language: str
     mode: str
-
-# class LessonById(BaseModel):
-#     id: int
-#     title: str
 
 # --------------------
 # Pydantic Schemas
@@ -88,7 +85,6 @@ class UserSettingsUpdate(BaseModel):
 
     class Config:
         orm_mode = True
-  
 
 def get_db():
     db = SessionLocal()
@@ -96,41 +92,6 @@ def get_db():
         yield db
     finally:
         db.close()
-
-
-# , language=user.language, mode=user.mode
-# @app.post('/users/', response_model=UserResponse)
-# def create_user(user:UserCreate, db:Session=Depends(get_db)):
-#     db_user = User(name=user.name)
-#     db.add(db_user)
-#     db.commit()
-#     db.refresh(db_user)
-#     return db_user
-
-
-# @app.get('/users/', response_model=list[UserResponse])
-# def get_users(db:Session=Depends(get_db)):
-#     users = db.query(User).all()
-#     return users
-
-# @app.get('/users/{user_id}', response_model=UserResponse)
-# def get_user_by_id(user_id:int, db:Session=Depends(get_db)):
-#     user = db.query(User).filter(User.id == user_id).first()
-#     if user is None:
-#         raise HTTPException(status_code=404, detail='User not found')
-#     return user
-
-# @app.put('/users/{user_id}', response_model=UserResponse)
-# def update_user(user_id:int, user:UserUpdate, db:Session=Depends(get_db)):
-#     db_user = db.query(User).filter(User.id == user_id).first()
-#     if db_user is None:
-#         raise HTTPException(status_code=404, detail='User not found')
-#     db_user.name = user.name if user.name is not None else db_user.name
-#     db_user.email = user.email if user.email is not None else db_user.email
-#     db.commit()
-#     db.refresh(db_user)
-#     return db_user
-
 
 # Load JSON data (save the provided payload as lessons.json)
 with open("D:/projects/climate_buddy/backend/lessons.json", "r", encoding="utf-8") as f:
@@ -150,8 +111,6 @@ def get_lessons_by_id(lesson_id:int):
         if lesson['id']== lesson_id:
             return lesson 
     raise HTTPException (status_code=404, detail='User not found')
-
-
 
 @app.get("/next_scenario", response_model=ScenarioOut)
 def get_next_scenario(db: Session = Depends(get_db)):
@@ -219,7 +178,6 @@ def get_choices(db: Session = Depends(get_db)):
         for c in choices
     ]
 
-
 @app.get("/co2e-summary/")
 def get_co2e_summary():
     conn = sqlite3.connect("r.db")
@@ -238,7 +196,6 @@ def get_co2e_summary():
     conn.close()
     return result
 
-
 file_path = "carbon-monitor-GLOBAL-maingraphdatas.xlsx"
 
 @app.get("/emissions")
@@ -250,7 +207,6 @@ def get_emissions():
         return pivoted.to_dict(orient="records")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 @app.get("/emissions/{country}")
 def get_country_emissions(country: str):
@@ -276,19 +232,6 @@ def create_user_settings(
     db.refresh(db_settings)
     return db_settings
 
-
-# @app.put("/settings/{id}")
-# def update_settings(id: int, settings: UserSettingsUpdate, db: Session = Depends(get_db)):
-#     db_settings = db.query(UserSettings).filter(UserSettings.id == id).first()
-#     if db_settings is None:
-#         raise HTTPException(status_code=404, detail="Settings not found")
-#     db_settings.username = settings.username
-#     db_settings.mode = settings.mode
-#     db_settings.language = settings.language
-#     db.commit()
-#     db.refresh(db_settings)
-#     return db_settings
-
 @app.put("/settings/update/{user_id}")
 def update_settings(user_id: int, settings: UserSettingsUpdate, db: Session = Depends(get_db)):
     existing = db.query(UserSettings).filter(UserSettings.id == user_id).first()
@@ -300,3 +243,171 @@ def update_settings(user_id: int, settings: UserSettingsUpdate, db: Session = De
     db.commit()
     db.refresh(existing)
     return {"message": "Settings updated", "user": existing}
+
+# New endpoint: Save a generated lesson
+class LessonCreate(BaseModel):
+    title: str
+    content: dict  # The generated JSON
+
+class LessonRequest(BaseModel):
+    topic: str
+
+def repair_json(json_str: str) -> str:
+    """Simple function to fix common JSON issues like trailing commas."""
+    # Remove trailing commas in arrays and objects
+    json_str = re.sub(r',\s*([}\]])', r'\1', json_str)
+    # Remove any leading/trailing backticks or 'json' labels
+    json_str = re.sub(r'^``````$', '', json_str.strip())
+    return json_str
+
+@app.post("/generate-lesson")
+async def generate_lesson(request: LessonRequest):
+    try:
+        # Generate a random seed for uniqueness
+        random_seed = random.randint(1, 1000000)
+        
+        # Generate with Ollama, with improved prompt including an explicit quiz example
+        response = ollama.chat(
+            model='gemma3:1b',
+            messages=[
+                {'role': 'system', 'content': 'You are a helpful assistant that generates structured lessons in valid JSON format only. Do not add extra text, backticks, or explanations outside the JSON. Start directly with the JSON object. Ensure every quiz object includes "correct_index" as a number (0-3). Example quiz structure: "quiz": [{"question": "Which gas is a greenhouse gas?", "options": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Hydrogen"], "correct_index": 2}]'},
+                {'role': 'user', 'content': f"Generate a unique, tailored lesson on {request.topic} as JSON. Make content specific to this topic without repeating from others. Include: 'introduction' (1-2 paragraphs as a Markdown-formatted string with bold/italics for emphasis), 'key_concepts' (array of 3-5 Markdown-formatted strings, e.g., '**Term:** Definition'), 'examples' (array of 2-3 Markdown-formatted strings, e.g., '- Example description'), 'quiz' (array of 3 objects with 'question' (string), 'options' (array of 4 strings), 'correct_index' (number 0-3)). Keep concise, 400-600 words. Engaging for educational game."}
+            ],
+            options={
+                'temperature': 0.8,  # For more varied outputs
+                'seed': random_seed  # For uniqueness
+            }
+        )
+        
+        if 'message' not in response or 'content' not in response['message']:
+            raise ValueError("Unexpected response format from Ollama")
+        
+        generated_content = response['message']['content'].strip()
+        
+        # String-based extraction: Find first '{' and last '}', slice between them
+        start = generated_content.find('{')
+        end = generated_content.rfind('}') + 1  # Include the closing brace
+        if start == -1 or end == 0:
+            raise ValueError("No valid JSON object found in generated content")
+        
+        cleaned_content = generated_content[start:end]
+        
+        # Repair the JSON to fix issues like trailing commas
+        repaired_content = repair_json(cleaned_content)
+        
+        # Now parse the repaired string
+        try:
+            lesson_json = json.loads(repaired_content)  # Parsed here—no file involved
+            
+            # Optional: Validate and fix if correct_index is missing
+            for quiz in lesson_json.get("quiz", []):
+                if "correct_index" not in quiz:
+                    print(f"Warning: Missing correct_index in quiz: {quiz}")
+                    quiz["correct_index"] = 0  # Default; adjust as needed
+            
+            return {"lesson": lesson_json}
+        except json.JSONDecodeError as parse_error:
+            raise HTTPException(status_code=500, detail=f"Failed to parse repaired content as JSON. Raw: {generated_content}. Cleaned: {cleaned_content}. Repaired: {repaired_content}. Error: {str(parse_error)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ollama error: {str(e)}")
+
+@app.post("/save-lesson")
+async def save_lesson(lesson: LessonCreate, db: Session = Depends(get_db)):
+    db_lesson = Lesson(title=lesson.title, content=lesson.content)
+    db.add(db_lesson)
+    try:
+        db.commit()
+        db.refresh(db_lesson)
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=f"Error saving lesson: {str(e)} (title may already exist)")
+    return {"id": db_lesson.id, "title": db_lesson.title}
+
+class ResponseCreate(BaseModel):
+    lesson_id: int
+    user_id: int
+    answers: dict
+    score: int
+
+@app.post("/save-response")
+async def save_response(response: ResponseCreate, db: Session = Depends(get_db)):
+    db_response = UserResponse(
+        lesson_id=response.lesson_id,
+        user_id=response.user_id,
+        answers=response.answers,
+        score=response.score
+    )
+    db.add(db_response)
+    db.commit()
+    db.refresh(db_response)
+    return {"id": db_response.id, "lesson_id": db_response.lesson_id, "user_id": db_response.user_id}
+
+
+# Ollama Config
+OLLAMA_URL = "http://localhost:11434/api/generate"
+MODEL = "gemma3:1b"
+SYSTEM_PROMPT = (
+    "You are Climate Buddy, an AI assistant dedicated to promoting climate awareness. "
+    "Provide helpful, accurate advice on reducing carbon footprints, sustainable living, "
+    "climate change facts, and eco-friendly tips. Keep responses engaging and positive."
+)
+
+class MessageRequest(BaseModel):
+    chat_id: int | None = None  # If None, create new chat
+    message: str
+
+@app.post("/chat")
+async def send_message(request: MessageRequest):
+    with Session() as session:
+        if request.chat_id is None:
+            # Create new chat
+            new_chat = Chat(title=f"Chat {datetime.now().strftime('%Y-%m-%d %H:%M')}", messages=[])
+            session.add(new_chat)
+            session.commit()
+            request.chat_id = new_chat.id
+
+        chat = session.query(Chat).filter_by(id=request.chat_id).first()
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found")
+        # Add user message
+        chat.messages.append({"role": "user", "content": request.message})
+        
+        # Prepare full prompt with history and system prompt
+        full_prompt = SYSTEM_PROMPT + "\n\n" + "\n".join(
+            [f"{msg['role']}: {msg['content']}" for msg in chat.messages]
+        )
+
+        try:
+            payload = {"model": MODEL, "prompt": full_prompt, "stream": False}
+            response = requests.post(OLLAMA_URL, json=payload)
+            response.raise_for_status()
+            result = response.json()
+            ai_response = result.get("response", "Sorry, I couldn't generate a response.")
+                        # Add AI response
+            chat.messages.append({"role": "assistant", "content": ai_response})
+            session.commit()
+            
+            return {"chat_id": chat.id, "response": ai_response}
+        except requests.RequestException as e:
+            raise HTTPException(status_code=500, detail=f"Ollama error: {str(e)}")
+
+@app.get("/chats")
+async def get_chats():
+    with Session() as session:
+        chats = session.query(Chat).all()
+        return [
+            {"id": c.id, "title": c.title, "created_at": c.created_at.isoformat()}
+            for c in chats
+        ]
+
+@app.get("/chat/{chat_id}")
+async def get_chat(chat_id: int):
+    with Session() as session:
+        chat = session.query(Chat).filter_by(id=chat_id).first()
+        if not chat:
+            raise HTTPException(status_code=404, detail="Chat not found")
+        return {"id": chat.id, "messages": chat.messages}
+
+# if __name__ == "__main__":
+#     import uvicorn
+#     uvicorn.run(app, host="0.0.0.0", port=8000)
