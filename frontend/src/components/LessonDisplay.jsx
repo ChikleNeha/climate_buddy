@@ -10,7 +10,7 @@ function LessonDisplay() {
   const [generatedLessons, setGeneratedLessons] = useState([]); // Array of generated content with IDs
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null); // For displaying errors
-  const [currentIndex, setCurrentIndex] = useState(0); // To process one by one for generation
+  const [currentIndex, setCurrentIndex] = useState(1); // To process one by one for generation
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0); // Track current lesson
   const [showQuiz, setShowQuiz] = useState(false); // Toggle quiz after lesson
   const [quizIndex, setQuizIndex] = useState(0); // Current quiz question
@@ -158,6 +158,7 @@ function LessonDisplay() {
   return (
     <div>
       <h1>Generated Lessons</h1>
+      <button onClick={generateNextLesson}>Generate Next Lesson</button>
       {loading && <p>Loading next lesson...</p>}
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {generatedLessons[currentLessonIndex] && !showQuiz ? (
