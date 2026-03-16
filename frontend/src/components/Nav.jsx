@@ -12,7 +12,6 @@ const Nav = () => {
     { icon: <LayoutDashboard />, path: "/dashboard", id: 2 },
     { icon: <BookOpenCheck />, path: "/test", id: 3 },
     { icon: <Bot />, path: "/chatbot", id: 4 },
-    { icon: <Settings />, path: "/settings", id: 5 },
   ];
 
   return (

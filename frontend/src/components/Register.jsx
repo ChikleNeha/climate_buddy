@@ -20,7 +20,7 @@ const Register = ({ onRegister }) => {
     };
 
   return (
-    <div className='flex flex-col items-center justify-center h-full gap-4'>
+    <div className='flex flex-col items-center justify-center h-full gap-4 text-secondary-black'>
       <h1 className='font-bold text-2xl -mb-2'>Join us to learn more and take action toward a more sustainable future</h1>
       <p className='max-w-3/5 text-center'>This learning platform will provide evidence-based information, explore the latest climate science, and empower you to understand and participate in effective climate action.</p>
       <div className='flex flex-col gap-4 border border-secondary-black rounded p-5 pt-8'>

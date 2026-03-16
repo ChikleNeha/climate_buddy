@@ -440,11 +440,9 @@ from typing import List, Optional, Dict, Any
 import random
 import json
 import re
-import requests
-from datetime import datetime, timezone
-
-import models  # Your models file
-import ollama
+import pandas as pd
+import models  
+from models import UserSettings
 
 app = FastAPI(debug=True)
 
@@ -539,18 +537,6 @@ class ResponseCreate(BaseModel):
     answers: Dict[str, Any]
     score: int
 
-# Ollama Config
-OLLAMA_URL = "http://localhost:11434/api/generate"
-MODEL = "gemma3:1b"
-SYSTEM_PROMPT = (
-    "You are Climate Buddy, an AI assistant dedicated to promoting climate awareness. "
-    "Provide helpful, accurate advice on reducing carbon footprints, sustainable living, "
-    "climate change facts, and eco-friendly tips. Keep responses engaging and positive."
-)
-
-class MessageRequest(BaseModel):
-    chat_id: Optional[int] = None  # If None, create new chat
-    message: str
 
 # Load lessons JSON (adjust path as needed)
 try:
@@ -563,12 +549,12 @@ except FileNotFoundError:
 def home():
     return {"backend": "is working"}
 
-app = FastAPI()
+
 @app.get("/lessons/", tags=["Lessons"])
 def get_lessons():
     return lessons
 
-app = FastAPI()
+
 @app.get("/lessons/{lesson_id}", tags=["Lessons"])
 def get_lesson_by_id(lesson_id: int):
     for lesson in lessons:
@@ -576,7 +562,7 @@ def get_lesson_by_id(lesson_id: int):
             return lesson
     raise HTTPException(status_code=404, detail="Lesson not found")
 
-app = FastAPI()
+
 @app.get("/next_scenario", response_model=ScenarioOut, tags=["Game"])
 def get_next_scenario(db: Session = Depends(get_db)):
     scenarios = db.query(models.Scenario).all()
@@ -585,7 +571,6 @@ def get_next_scenario(db: Session = Depends(get_db)):
     scenario = random.choice(scenarios)
     return scenario
 
-app = FastAPI()
 @app.post("/play", response_model=PlayResponse, tags=["Game"])
 def play(req: PlayRequest, db: Session = Depends(get_db)):
     scenario = db.query(models.Scenario).filter(models.Scenario.id == req.scenario_id).first()
@@ -630,7 +615,6 @@ def play(req: PlayRequest, db: Session = Depends(get_db)):
         used_co2e=chosen_option.co2_impact
     )
 
-app = FastAPI()
 @app.get("/choices", tags=["Game"])
 def get_choices(db: Session = Depends(get_db)):
     choices = db.query(models.Choice).all()
@@ -644,7 +628,6 @@ def get_choices(db: Session = Depends(get_db)):
         for c in choices
     ]
 
-app = FastAPI()
 @app.get("/co2e-summary/", tags=["Statistics"])
 def get_co2e_summary():
     import sqlite3
@@ -666,11 +649,9 @@ def get_co2e_summary():
 
 file_path = "carbon-monitor-GLOBAL-maingraphdatas.xlsx"
 
-
-app = FastAPI()
 @app.get("/emissions", tags=["Statistics"])
 def get_emissions():
-    import pandas as pd
+    
     try:
         df = pd.read_excel(file_path, sheet_name="datas")
         pivot = df.groupby(["country", "sector"])["MtCO2 per day"].sum().reset_index()
@@ -680,7 +661,6 @@ def get_emissions():
         raise HTTPException(status_code=500, detail=str(e))
 
 
-app = FastAPI()
 @app.get("/emissions/{country}", tags=["Statistics"])
 def get_country_emissions(country: str):
     import pandas as pd
@@ -695,24 +675,44 @@ def get_country_emissions(country: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-app = FastAPI()
-@app.post("/settings", tags=["User"])
+# SQLAlchemy model
+
+# Pydantic model for create
+class UserSettingsCreate(BaseModel):
+    username: str
+    mode: str
+    language: str
+
+# Pydantic model for update (optional fields)
+class UserSettingsUpdate(BaseModel):
+    username: str | None = None
+    mode: str | None = None
+    language: str | None = None
+
+@app.post("/settings")
 def create_user_settings(settings: UserSettingsCreate, db: Session = Depends(get_db)):
-    db_settings = models.UserSettings(**settings.dict())
+    # Check if username already exists
+    existing = db.query(UserSettings).filter(UserSettings.username == settings.username).first()
+    if existing:
+        raise HTTPException(status_code=400, detail="Username already exists")
+
+    # Create new settings
+    db_settings = UserSettings(**settings.model_dump())  # Use model_dump() instead of dict()
     db.add(db_settings)
     db.commit()
     db.refresh(db_settings)
     return db_settings
 
-app = FastAPI()
-@app.put("/settings/update/{user_id}", tags=["User"])
+@app.put("/settings/update/{user_id}")
 def update_settings(user_id: int, settings: UserSettingsUpdate, db: Session = Depends(get_db)):
-    existing = db.query(models.UserSettings).filter(models.UserSettings.id == user_id).first()
+    existing = db.query(UserSettings).filter(UserSettings.id == user_id).first()
     if existing is None:
         raise HTTPException(status_code=404, detail="User ID does not exist")
-    existing.username = settings.username
-    existing.mode = settings.mode
-    existing.language = settings.language
+
+    update_data = settings.model_dump(exclude_unset=True)  # Only update provided fields
+    for key, value in update_data.items():
+        setattr(existing, key, value)
+
     db.commit()
     db.refresh(existing)
     return {"message": "Settings updated", "user": existing}
@@ -723,58 +723,7 @@ def repair_json(json_str: str) -> str:
     json_str = re.sub(r'^```')
     return json_str
 
-app = FastAPI()
-@app.post("/generate-lesson", tags=["Lessons"])
-async def generate_lesson(request: LessonRequest):
-    try:
-        random_seed = random.randint(1, 1000000)
-        response = requests.post(
-            OLLAMA_URL,
-            json={
-                "model": MODEL,
-                "prompt": f"Generate a unique, tailored lesson on {request.topic} as JSON. "
-                          "Make content specific to this topic without repeating from others. "
-                          "Include: 'introduction' (1-2 paragraphs as a Markdown-formatted string with bold/italics for emphasis), "
-                          "'key_concepts' (array of 3-5 Markdown-formatted strings, e.g., '**Term:** Definition'), "
-                          "'examples' (array of 2-3 Markdown-formatted strings, e.g., '- Example description'), "
-                          "'quiz' (array of 3 objects with 'question' (string), 'options' (array of 4 strings), 'correct_index' (number 0-3)). "
-                          "Keep concise, 400-600 words. Engaging for educational game.",
-                "system": "You are a helpful assistant that generates structured lessons in valid JSON format only. "
-                          "Do not add extra text, backticks, or explanations outside the JSON. Start directly with the JSON object. "
-                          "Ensure every quiz object includes 'correct_index' as a number (0-3). "
-                          "Example quiz structure: 'quiz': [{'question': 'Which gas is a greenhouse gas?', 'options': ['Oxygen', 'Nitrogen', 'Carbon Dioxide', 'Hydrogen'], 'correct_index': 2}]",
-                "stream": False,
-                "options": {"temperature": 0.2, "seed": random_seed}
-            }
-        )
-        response.raise_for_status()
-        generated_content = response.json().get("response", "").strip()
 
-        start = generated_content.find('{')
-        end = generated_content.rfind('}') + 1
-        if start == -1 or end == 0:
-            raise ValueError("No valid JSON object found in generated content")
-
-        cleaned_content = generated_content[start:end]
-        repaired_content = repair_json(cleaned_content)
-
-        try:
-            lesson_json = json.loads(repaired_content)
-            for quiz in lesson_json.get("quiz", []):
-                if "correct_index" not in quiz:
-                    quiz["correct_index"] = 0  # Default fallback
-            return {"lesson": lesson_json}
-        except json.JSONDecodeError as e:
-            raise HTTPException(status_code=500, detail=f"JSON parse error: {str(e)}. Raw content: {generated_content}")
-    except requests.RequestException as e:
-        raise HTTPException(status_code=500, detail=f"Ollama API error: {str(e)}")
-    except ValueError as e:
-        raise HTTPException(status_code=500, detail=f"Content extraction error: {str(e)}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
-
-
-app = FastAPI()
 @app.post("/save-lesson", tags=["Lessons"])
 async def save_lesson(lesson: LessonCreate, db: Session = Depends(get_db)):
     db_lesson = models.Lesson(title=lesson.title, content=lesson.content)
@@ -787,7 +736,6 @@ async def save_lesson(lesson: LessonCreate, db: Session = Depends(get_db)):
         raise HTTPException(status_code=400, detail=f"Error saving lesson: {str(e)} (title may already exist)")
     return {"id": db_lesson.id, "title": db_lesson.title}
 
-app = FastAPI()
 @app.post("/save-response", tags=["Lessons"])
 async def save_response(response: ResponseCreate, db: Session = Depends(get_db)):
     db_response = models.UserResponse(
@@ -801,61 +749,3 @@ async def save_response(response: ResponseCreate, db: Session = Depends(get_db))
     db.refresh(db_response)
     return {"id": db_response.id, "lesson_id": db_response.lesson_id, "user_id": db_response.user_id}
 
-app = FastAPI()
-
-# import ollama
-
-# client = ollama.Client()
-
-# model = "gemma3:1b"
-# prompt = "what is python?"
-
-# response = client.generate(model=model, prompt=prompt)
-# print(response.response)
-
-# import ollama
-# import json
-# from datetime import datetime, timezone
-
-# Assuming you have these defined somewhere
-SYSTEM_PROMPT = "You are a climate education expert give responses that are beginner friendly and accurate."  # Replace with actual SYSTEM_PROMPT
-MODEL = "gemma3:1b"  # From your target example
-OLLAMA_URL = "http://localhost:11434/api/generate"  # Not needed for ollama library, but keeping for reference
-
-# Simplified chat management without DB
-chats = {}  # In-memory storage for chats, key: chat_id, value: {'title': str, 'messages': list}
-
-# client = ollama.Client()
-
-class ChatCreate(BaseModel):
-    msg: str
-
-@app.post('/chat')
-def chat(msg: str, response_model=ChatCreate):
-    client = ollama.Client()
-    result = client.generate(model="gemma3:1b", prompt=msg)
-    return {"response": result.response}
-# Example usage
-# if __name__ == "__main__":
-#     try:
-#         result = send_message(user_id=1, message="what is python?")
-#         print(json.dumps(result, indent=2))
-#     except ValueError as e:
-#         print(str(e))
-
-
-# @app.get("/chats", tags=["Chat"])
-# async def get_chats(db: Session = Depends(get_db)):
-#     chats = db.query(models.Chat).all()
-#     return [
-#         {"id": c.id, "title": c.title, "created_at": c.created_at.isoformat()}
-#         for c in chats
-#     ]
-
-
-# @app.get("/chat/{chat_id}", tags=["Chat"])
-# async def get_chat(chat_id: int, db: Session = Depends(get_db)):
-#     chat = db.query(models.Chat).filter_by(id=chat_id).first()
-#     if not chat:
-#         raise HTTPException(status_code=404, detail="Chat not found")
-#     return {"id": chat.id, "messages": chat.messages}

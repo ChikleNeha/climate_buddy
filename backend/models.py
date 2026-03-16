@@ -3,7 +3,7 @@ from sqlalchemy.orm import sessionmaker, Session, relationship, declarative_base
 from datetime import datetime, timezone
 from sqlalchemy.ext.mutable import MutableList
 
-DATABASE_URL = 'sqlite:///./climate.db'
+DATABASE_URL = 'sqlite:///./climate_buddy.db'
 engine = create_engine(DATABASE_URL, connect_args={'check_same_thread': False})
 SessionLocal = sessionmaker(autoflush=False, autocommit=False, bind=engine)
 Base = declarative_base()

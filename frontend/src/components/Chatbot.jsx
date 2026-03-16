@@ -1,57 +1,134 @@
-import React, { useState } from "react";
-import axios from "axios";
+import React, { useState, useRef, useEffect } from 'react';
+import axios from 'axios';
+import ReactMarkdown from 'react-markdown';
+import { MoveUp } from "lucide-react";
 
-export default function Chatbot() {
-  const [input, setInput] = useState("");
-  const [response, setResponse] = useState(null);
-  const API_BASE_URL = 'http://127.0.0.1:8000'
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+const Chatbot = () => {
+  const [messages, setMessages] = useState([]);
+  const [input, setInput] = useState('');
+  const inputRef = useRef(null);
+
+  // Keep input bar fixed at bottom by making chat window scrollable and reserving space for input
+  useEffect(() => {
+    // Auto-scroll to latest message
+    const chatArea = document.getElementById('chat-scroll-area');
+    if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+  }, [messages]);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    // Add user message
+    const newMessages = [...messages, { role: 'user', content: input }];
+    setMessages(newMessages);
+    const userInput = input;
+    setInput('');
+
     try {
-      const res = await axios.post(`${API_BASE_URL}/chat`, { query: input });
-      console.log(res)
-      setResponse(res.data.reply || "Success!");
-    } catch (err) {
-      setResponse("Error: " + (err.response?.data?.detail || err.message));
-      console.error(err)
+      const response = await axios.post('http://127.0.0.1:8001/chat', { message: userInput });
+      setMessages([...newMessages, { role: 'assistant', content: response.data.reply }]);
+    } catch (error) {
+      setMessages([
+        ...newMessages,
+        { role: 'system', content: 'Error: Could not get response from server.' },
+      ]);
     }
-    setInput("");
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen">
-      <div className="bg-white shadow-lg rounded-3xl p-8 text-center max-w-md w-full">
-        <h2 className="text-lg font-medium text-gray-600">Hello</h2>
-        <h1 className="text-2xl font-bold text-gray-800">
-          I am <span className="text-blue-500">Climate</span> Buddy
-        </h1>
-        <p className="text-gray-500 mt-2">How can I help you?</p>
-        <form
-          onSubmit={handleSubmit}
-          className="mt-6 flex items-center bg-white border-2 border-blue-400 rounded-full overflow-hidden"
-        >
-          <input
-            type="text"
-            placeholder="Ask something"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            className="flex-grow px-4 py-2 outline-none text-gray-700 bg-transparent"
-            required
-          />
-          <button
-            type="submit"
-            className="px-3 py-2 text-blue-500 hover:text-blue-700 focus:outline-none"
+    <div className="max-w-[90%] mx-auto p-5 flex flex-col h-[95vh]">
+      {/* Chat scroll area */}
+      <div
+        id="chat-scroll-area"
+        className="rounded-lg p-4 overflow-y-auto mb-4 bg-transparent w-full flex-1"
+        style={{ minHeight: '300px' }}
+      >
+        {messages.map((msg, index) => (
+          <div
+            key={index}
+            className={`mb-3 p-3 rounded-lg ${
+              msg.role === 'user'
+                ? 'ml-auto bg-blue-100 text-right w-fit'
+                : msg.role === 'assistant'
+                ? 'mr-auto text-left w-full'
+                : 'mx-auto bg-red-100 text-center w-full'
+            }`}
           >
-            ↓
-          </button>
-        </form>
-        {response && (
-          <div className="mt-6 p-4 bg-green-100 text-green-800 rounded-lg">
-            {response}
+            <strong className="block font-semibold mb-1">
+              {msg.role === 'user'
+                ? 'You'
+                : msg.role === 'assistant'
+                ? 'Assistant'
+                : 'System'}
+              :
+            </strong>
+            {msg.role === 'assistant' ? (
+              <div className="prose prose-sm max-w-none prose-p:mb-12 prose-li:mb-8 prose-li:break-after">
+                <ReactMarkdown
+                  components={{
+                    // Custom link styling
+                    a: ({ node, children, href, ...props }) => (
+                      <a
+                        href={href}
+                        className="text-blue-600 underline hover:text-blue-800"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        {...props}
+                      >
+                        {children}
+                      </a>
+                    ),
+                    // Custom list item: extra line break after every point for heavy spacing
+                    li: ({ children, ...props }) => (
+                      <li {...props} className="mb-8">
+                        {children}
+                        <br />
+                      </li>
+                    ),
+                    // Code blocks
+                    code: ({ node, inline, className, children, ...props }) =>
+                      inline ? (
+                        <code className="bg-gray-200 px-1 rounded" {...props}>
+                          {children}
+                        </code>
+                      ) : (
+                        <pre className="bg-gray-200 p-2 rounded overflow-x-auto">
+                          <code {...props}>{children}</code>
+                        </pre>
+                      ),
+                  }}
+                >
+                  {msg.content}
+                </ReactMarkdown>
+              </div>
+            ) : (
+              <span>{msg.content}</span>
+            )}
           </div>
-        )}
+        ))}
+      </div>
+      {/* Input bar, always at the bottom */}
+      <div className="flex items-end sticky bottom-0 py-2" style={{ zIndex: 2 }}>
+        {/* Dynamic input width based on content */}
+        <input
+          ref={inputRef}
+          type="text"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSend()}
+          className="px-4 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 w-full"
+          placeholder="Type your message..."
+        />
+        <button
+          onClick={handleSend}
+          className="px-4 py-2 bg-blue-500 text-white rounded-r-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+        <MoveUp />
+        </button>
       </div>
     </div>
   );
-}
+};
+
+export default Chatbot;

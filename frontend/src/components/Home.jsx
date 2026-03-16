@@ -1,7 +1,7 @@
 import React from 'react'
 import { useEffect } from 'react'
 import axios from 'axios'
-import LessonDisplay from './LessonDisplay'
+import LessonPage from './LessonPage'
 
 const API_BASE_URL = 'http://127.0.0.1:8000'
 const Home = () => {
@@ -21,7 +21,7 @@ const Home = () => {
   }
   return (
     <div>
-      <LessonDisplay />
+      <LessonPage />
     </div>
   )
 }

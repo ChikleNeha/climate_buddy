@@ -30,7 +30,6 @@ function App() {
         <Route path='/global-emissions' element={<EmissionsChart />} />
         <Route path='/chatbot' element={<Chatbot/>}/>
         <Route path='/test' element={<Test/>}/>
-        <Route path='/settings' element={<Settings onRegister={handleUserRegistrationSuccess}/>} />
       </Route>
     </Routes>
     </BrowserRouter>
